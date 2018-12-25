@@ -3,6 +3,7 @@
 // Imports and constants
 // =====================
 
+var http = require('http');
 const argv = require('minimist')(process.argv.slice(2));
 const helpers = require('./helpers.js')
 
@@ -18,6 +19,36 @@ const info  = console.log.bind(console, 'INFO:');
 const log   = console.log.bind(console, 'LOG:');
 const error = console.log.bind(console, 'ERROR:');
 const debug = console.log.bind(console, 'DEBUG:');
+
+
+// api
+// ====
+
+const checkExp = function(config, exp) {
+  return config.experiments.includes(exp);
+};
+
+const start = function(config) {
+  this.config = config;
+  http.createServer((req, res) => {
+    const experiment = req.url.split('/')[1];
+    const trial = req.url.split('/')[2];
+    debug(req.method, req.url);
+    if (experiment == 'status') {
+      res.write('Alive and well!');
+    } if (req.method == 'POST' && checkExp(this.config, experiment)) {
+      res.write('POSTing to ' + experiment + ' and trial ' +trial);
+    } if (req.method == 'GET' && checkExp(this.config, experiment)) {
+      res.write('GETing ' + experiment + ' and trial ' + trial);
+    } else {
+      res.write('Unknown experiment ' + experiment + 'or method ' + req.method);
+    }
+    res.end();
+  }).listen(process.env.PORT, function(){
+   console.log("server start at port", process.env.PORT);
+ });
+};
+
 
 // Main
 // ====
@@ -35,6 +66,7 @@ node psyexpbe.js <command>
   init                                                  WARNING: creates a empty file with experiments, perform at initial setup only!
   add --name="experiment name" --email=name@example.com add new experiment
   list                                                  list the experiments
+  start                                                 start the server
   `);
 } else if (argv._[0] == 'config') {
   info('Config file:', process.env.CONFIG, 'in bucket:', process.env.BUCKET );
@@ -45,7 +77,7 @@ node psyexpbe.js <command>
       data: JSON.stringify({ experiments : [] })
     }
   ).then(log);
-} else if (argv._[0] == 'add' || argv._[0] == 'list' ) {
+} else if (argv._[0] == 'add' || argv._[0] == 'list' || argv._[0] == 'start') {
   debug('Fetching', process.env.CONFIG, 'from the bucket', process.env.BUCKET )
   helpers.getS3(process.env.BUCKET, process.env.CONFIG)
   .then((config) => {
@@ -68,7 +100,9 @@ node psyexpbe.js <command>
         log('Added expriment "', argv.name, '" with unique id', UUID, 'for user', argv.email);
       }
     }
-    return;
+    if (argv._[0] == 'start') {
+      start(config);
+    }
   })
 } else {
   error('unknown command: use `./psyexpbe.js help` or `node psyexpbe.js help` to show the help');
