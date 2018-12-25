@@ -41,7 +41,7 @@ const start = function(config) {
     } if (req.method == 'GET' && checkExp(this.config, experiment)) {
       res.write('GETing ' + experiment + ' and trial ' + trial);
     } else {
-      res.write('Unknown experiment ' + experiment + 'or method ' + req.method);
+      res.write('Unknown experiment ' + experiment + ' or method ' + req.method);
     }
     res.end();
   }).listen(process.env.PORT, function(){
