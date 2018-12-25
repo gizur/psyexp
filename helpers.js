@@ -1,12 +1,12 @@
 
 // helpers.js
 
-// imports
+// imports and constants
 // =======
 
 const AWS = require('aws-sdk');
+const MAX_SIZE = 10000
 
-const CONFIG = require('./config.js');
 
 // Setup logging
 // =============
@@ -22,30 +22,52 @@ const error = console.error.bind(console);
 
 var H = {};
 
+// From: https://gist.github.com/jed/982883
+H.uuid = function (
+  a                  // placeholder
+){
+  return a           // if the placeholder was passed, return
+    ? (              // a random number from 0 to 15
+      a ^            // unless b is 8,
+      Math.random()  // in which case
+      * 16           // a random number from
+      >> a/4         // 8 to 11
+      ).toString(16) // in hexadecimal
+    : (              // or otherwise a concatenated string:
+      [1e7] +        // 10000000 +
+      -1e3 +         // -1000 +
+      -4e3 +         // -4000 +
+      -8e3 +         // -80000000 +
+      -1e11          // -100000000000,
+      ).replace(     // replacing
+        /[018]/g,    // zeroes, ones, and eights with
+        H.uuid            // random hex digits
+      )
+}
 
 // AWS S3 functions
 // ----------------
 
-H.saveS3 = function(params) {
+H.saveS3 = function(bucket, params) {
   return new Promise((fulfill, reject) => {
     var s3 = new AWS.S3();
-    //debug({Bucket: CONFIG.EXPORT_BUCKET, Key: params.ticker, Body: params.data}, params);
-    s3.putObject({Bucket: CONFIG.EXPORT_BUCKET, Key: params.ticker, Body: params.data}, (err, data) => {
+    //debug({Bucket: bucket, Key: params.filename, Body: params.data}, params);
+    s3.putObject({Bucket: bucket, Key: params.filename, Body: params.data}, (err, data) => {
       if (err) reject(err);
       else {
-        fulfill('Successfully uploaded ' + params.ticker + ' data');
+        fulfill('Successfully uploaded ' + params.filename + ' data');
       }
     });
   });
 };
 
-H.getS3 = function(ticker) {
+H.getS3 = function(bucket, filename) {
   return new Promise((fulfill, reject) => {
     var s3 = new AWS.S3();
-    var buf = Buffer.alloc(CONFIG.CSV_MAX_SIZE)
+    var buf = Buffer.alloc(MAX_SIZE)
     var idx = 0;
 
-    s3.getObject({Bucket: CONFIG.IMPORT_BUCKET, Key: ticker})
+    s3.getObject({Bucket: bucket, Key: filename})
     .on('httpData', chunk => {
       chunk.copy(buf, idx);
       idx += chunk.length;
@@ -62,10 +84,10 @@ H.getS3 = function(ticker) {
   })
 };
 
-H.listS3 = function() {
+H.listS3 = function(bucket) {
   return new Promise((fulfill, reject) => {
     var s3 = new AWS.S3();
-    s3.listObjects({Bucket: CONFIG.IMPORT_BUCKET, MaxKeys: 1000}, (err, data) => {
+    s3.listObjects({Bucket: bucket, MaxKeys: 1000}, (err, data) => {
       if (err) reject(err);
       else {
         // exclude contents of 'sub-directories'
@@ -77,19 +99,19 @@ H.listS3 = function() {
   });
 };
 
-H.archiveS3 = function(ticker) {
+H.archiveS3 = function(bucket, filename) {
   return new Promise((fulfill, reject) => {
     var s3 = new AWS.S3();
-    s3.copyObject({Bucket: CONFIG.IMPORT_BUCKET,
-                   Key: 'archive/' + ticker,
-                   CopySource: CONFIG.IMPORT_BUCKET + '/' + ticker
+    s3.copyObject({Bucket: bucket,
+                   Key: 'archive/' + filename,
+                   CopySource: bucket + '/' + filename
     }, (err, data) => {
       if (err) reject(err);
       else {
-        fulfill(ticker)
-        s3.deleteObject({Bucket: CONFIG.IMPORT_BUCKET, Key: ticker}, (err, data) => {
+        fulfill(filename)
+        s3.deleteObject({Bucket: bucket, Key: filename}, (err, data) => {
           if (err) reject(err);
-          else fulfill(ticker);
+          else fulfill(filename);
        });
       }
     });

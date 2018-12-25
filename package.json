@@ -1,0 +1,29 @@
+{
+  "name": "psyexpbe",
+  "version": "0.0.1",
+  "description": "Simplest possible backend for psychological (or any) experiment",
+  "main": "psyexpbe.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gizur/psyexpbe.git"
+  },
+  "keywords": [
+    "psychology",
+    "experiment",
+    "backend"
+  ],
+  "author": "Jonas Colmsjö",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gizur/psyexpbe/issues"
+  },
+  "homepage": "https://github.com/gizur/psyexpbe#readme",
+  "dependencies": {
+    "aws-sdk": "^2.382.0",
+    "minimist": "^1.2.0",
+    "npm": "^6.5.0"
+  }
+}
