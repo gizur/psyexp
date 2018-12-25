@@ -37,7 +37,7 @@ const start = function(config) {
     if (experiment == 'status') {
       res.write('Alive and well!');
     } if (req.method == 'POST' && checkExp(this.config, experiment)) {
-      res.write('POSTing to ' + experiment + ' and trial ' +trial);
+      res.write('POSTing to ' + experiment + ' and trial ' + trial);
     } if (req.method == 'GET' && checkExp(this.config, experiment)) {
       res.write('GETing ' + experiment + ' and trial ' + trial);
     } else {
@@ -55,12 +55,12 @@ const start = function(config) {
 
 if (argv._[0] == 'help') {
   info(`
-psyexpbe.js is the simples possbible (or at least very close) backend for storing
+psyexp.js is the simples possbible (or at least very close) backend for storing
             data for psychological (or any) experiments. It does authenticates
             request for storing data using a UUID (which then should be kept)
             secret.
 
-node psyexpbe.js <command>
+node psyexp.js <command>
   help                                                  show this help
   config                                                show the current configuration
   init                                                  WARNING: creates a empty file with experiments, perform at initial setup only!
@@ -105,5 +105,5 @@ node psyexpbe.js <command>
     }
   })
 } else {
-  error('unknown command: use `./psyexpbe.js help` or `node psyexpbe.js help` to show the help');
+  error('unknown command: use `./psyexp.js help` or `node psyexp.js help` to show the help');
 }
