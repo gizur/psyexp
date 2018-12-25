@@ -48,13 +48,23 @@ node psyexpbe.js <command>
 } else if (argv._[0] == 'add' || argv._[0] == 'list' ) {
   debug('Fetching', process.env.CONFIG, 'from the bucket', process.env.BUCKET )
   helpers.getS3(process.env.BUCKET, process.env.CONFIG)
-  .then((data) => {
-    //debug(data);
+  .then((config) => {
+    config = JSON.parse(config);
+    if (argv._[0] == 'list') {
+      info(config);
+    }
     if (argv._[0] == 'add') {
       if (argv._.length != 1) {
         error('add takes two arguments, see help');
       } else {
         const UUID = helpers.uuid();
+        config.experiments.push(UUID);
+        helpers.saveS3(process.env.BUCKET,
+          { filename: process.env.CONFIG,
+            data: JSON.stringify(config)
+          }
+        ).then(log);
+
         log('Added expriment "', argv.name, '" with unique id', UUID, 'for user', argv.email);
       }
     }
