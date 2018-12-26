@@ -32,8 +32,8 @@ const addExperiment = function(config, name, email) {
       data: JSON.stringify(config)
     }
   ).then(log);
-
   log('Added expriment "', name, '" with unique id', uuid, 'for user', email);
+  return uuid;    // returning before save has completed, will have to do for now!
 };
 
 
@@ -59,26 +59,46 @@ Server.prototype.start = function() {
     if (experiment == 'status') {
       res.end('Alive and well!');
     }
-    // Save expriment data or create a new experiment
+    // Save experiment data or create a new experiment
     else if (req.method == 'POST') {
       var body = '';
       req.on('data', (data) => {
         body += data;
       });
       req.on('end', () => {
-        if (!this.checkExp(experiment)) {
+        if (experiment == 'add') {
+          var params;
+          try {
+            params = JSON.parse(body);
+          } catch (err) {
+            error('Could not parse JSON payload!', body);
+            res.end(JSON.stringify({err: 'Could not parse JSON payload!'}));
+            return;
+          }
+          if (typeof params.name === 'undefined' || typeof params.email === 'undefined') {
+            res.end('Mandatory request parameters missing. Should be: {name: "My experiment", email: "me@example.com"}');
+            return;
+          }
+          params.uuid = addExperiment(this.config, params.name, params.email)
+          res.end(JSON.stringify(params));
+        }
+        else if (!this.checkExp(experiment)) {
           res.end('Unknown experiment: ' + experiment);
+          return;
         } else {
           helpers.saveS3(process.env.BUCKET,
             { filename: experiment + '/' + trial,
               data: body
             }
-          ).then(log);
-          res.end('Added ' + body.length + ' characters of data to trail ' +
-                    trial + ' in experiment ' + experiment);
+          ).then(data => {
+            res.end('Added ' + body.length + ' characters of data to trail ' +
+                      trial + ' in experiment ' + experiment);
+            log(data);
+          });
         }
       });
     }
+    // List existing experiments
     else if (req.method == 'GET' && this.checkExp(experiment)) {
       helpers.listS3(process.env.BUCKET, experiment)
       .then((trials) => {
@@ -136,7 +156,7 @@ else if (argv._[0] == 'add' || argv._[0] == 'list' || argv._[0] == 'start') {
   .then((config) => {
     config = JSON.parse(config);
     if (argv._[0] == 'list') {
-      info(JSON.stringify(config));
+      info(JSON.stringify(config, null, ' '));
     }
     if (argv._[0] == 'add') {
       if (argv._.length != 1 || typeof argv.name === 'undefined' ||

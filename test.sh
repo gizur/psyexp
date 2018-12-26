@@ -8,8 +8,11 @@ TRIAL2=27adb2d3
 echo "Remove old test data:"
 s3cmd rm s3://psyexp/$EXPERIMENT/*
 
-echo -e "\nShould say that it's alive and well:"
+echo -e "\nShuold say alive and well:"
 curl http://localhost:3000/status
+
+echo -e "\n\nTry to add an experiment, should get a uuid back:"
+curl -d '{"name": "My experiment", "email": "me@example.com"}' -X POST http://localhost:3000/add
 
 echo -e "\n\nSave some data in two trials for an experiment:"
 curl -d 'Whatever you want to save (CSV, JSON etc.)' -X POST http://localhost:$PORT/$EXPERIMENT/$TRIAL1
