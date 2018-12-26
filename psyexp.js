@@ -21,34 +21,77 @@ const error = console.log.bind(console, 'ERROR:');
 const debug = console.log.bind(console, 'DEBUG:');
 
 
+// Helpers
+// =======
+
+const addExperiment = function(config, name, email) {
+  const uuid = helpers.uuid();
+  config.experiments.push({uuid: uuid, name: name, email: email});
+  helpers.saveS3(process.env.BUCKET,
+    { filename: process.env.CONFIG,
+      data: JSON.stringify(config)
+    }
+  ).then(log);
+
+  log('Added expriment "', name, '" with unique id', uuid, 'for user', email);
+};
+
+
 // api
 // ====
 
-const checkExp = function(config, exp) {
-  return config.experiments.includes(exp);
+const Server = function(config) {
+  this.config = config;
 };
 
-const start = function(config) {
-  this.config = config;
+Server.prototype.checkExp = function(exp) {
+  var exists = false;
+  for (var i=0; i<this.config.experiments.length && !exists; i++) {
+    exists = this.config.experiments[i].uuid == exp;
+  }
+  return exists;
+};
+
+Server.prototype.start = function() {
   http.createServer((req, res) => {
     const experiment = req.url.split('/')[1];
     const trial = req.url.split('/')[2];
-    debug(req.method, req.url);
     if (experiment == 'status') {
-      res.write('Alive and well!');
+      res.end('Alive and well!');
     }
-    else if (req.method == 'POST' && checkExp(this.config, experiment)) {
-      res.write('POSTing to ' + experiment + ' and trial ' + trial);
+    // Save expriment data or create a new experiment
+    else if (req.method == 'POST') {
+      var body = '';
+      req.on('data', (data) => {
+        body += data;
+      });
+      req.on('end', () => {
+        if (!this.checkExp(experiment)) {
+          res.end('Unknown experiment: ' + experiment);
+        } else {
+          helpers.saveS3(process.env.BUCKET,
+            { filename: experiment + '/' + trial,
+              data: body
+            }
+          ).then(log);
+          res.end('Added ' + body.length + ' characters of data to trail ' +
+                    trial + ' in experiment ' + experiment);
+        }
+      });
     }
-    else if (req.method == 'GET' && checkExp(this.config, experiment)) {
-      res.write('GETing trials for ' + experiment);
+    else if (req.method == 'GET' && this.checkExp(experiment)) {
+      helpers.listS3(process.env.BUCKET, experiment)
+      .then((trials) => {
+        // remove the experiment id
+        trials = trials.map(e => e.split('/')[1])
+        res.end(JSON.stringify(trials));
+      });
     }
     else {
-      res.write('Unknown experiment: ' + experiment + ' or method: ' + req.method);
+      res.end('Unknown experiment: ' + experiment + ' or method: ' + req.method);
     }
-    res.end();
-  }).listen(process.env.PORT, function(){
-   console.log("server start at port", process.env.PORT);
+  }).listen(process.env.PORT, () => {
+    log("Server starts at port", process.env.PORT);
  });
 };
 
@@ -72,42 +115,40 @@ node psyexp.js <command>
   start                                                 start the server
   uuid                                                  get a univeral uniqeu id (for config file etc.)
   `);
-} else if (argv._[0] == 'config') {
+}
+else if (argv._[0] == 'config') {
   info('Config file:', process.env.CONFIG, 'in bucket:', process.env.BUCKET );
-} else if (argv._[0] == 'uuid') {
+}
+else if (argv._[0] == 'uuid') {
   log('UUID:', helpers.uuid());
-} else if (argv._[0] == 'init') {
+}
+else if (argv._[0] == 'init') {
   log('Save empty', process.env.CONFIG, 'to the bucket', process.env.BUCKET );
   helpers.saveS3(process.env.BUCKET,
     { filename: process.env.CONFIG,
       data: JSON.stringify({ experiments : [] })
     }
   ).then(log);
-} else if (argv._[0] == 'add' || argv._[0] == 'list' || argv._[0] == 'start') {
-  debug('Fetching', process.env.CONFIG, 'from the bucket', process.env.BUCKET )
+}
+else if (argv._[0] == 'add' || argv._[0] == 'list' || argv._[0] == 'start') {
+  log('Fetching config in', process.env.CONFIG, 'from the bucket', process.env.BUCKET )
   helpers.getS3(process.env.BUCKET, process.env.CONFIG)
   .then((config) => {
     config = JSON.parse(config);
     if (argv._[0] == 'list') {
-      info(config);
+      info(JSON.stringify(config));
     }
     if (argv._[0] == 'add') {
-      if (argv._.length != 1) {
+      if (argv._.length != 1 || typeof argv.name === 'undefined' ||
+          typeof argv.email === 'undefined') {
         error('add takes two arguments, see help');
       } else {
-        const UUID = helpers.uuid();
-        config.experiments.push(UUID);
-        helpers.saveS3(process.env.BUCKET,
-          { filename: process.env.CONFIG,
-            data: JSON.stringify(config)
-          }
-        ).then(log);
-
-        log('Added expriment "', argv.name, '" with unique id', UUID, 'for user', argv.email);
+        addExperiment(config, argv.name, argv.email);
       }
     }
     if (argv._[0] == 'start') {
-      start(config);
+      const server = new Server(config);
+      server.start();
     }
   })
 } else {

@@ -6,6 +6,7 @@
 
 const AWS = require('aws-sdk');
 const MAX_SIZE = 10000
+const MAX_KEYS = 10000
 
 
 // Setup logging
@@ -84,15 +85,15 @@ H.getS3 = function(bucket, filename) {
   })
 };
 
-H.listS3 = function(bucket) {
+H.listS3 = function(bucket, experiment) {
   return new Promise((fulfill, reject) => {
     var s3 = new AWS.S3();
-    s3.listObjects({Bucket: bucket, MaxKeys: 1000}, (err, data) => {
+    s3.listObjects({Bucket: bucket, MaxKeys: MAX_KEYS}, (err, data) => {
       if (err) reject(err);
       else {
-        // exclude contents of 'sub-directories'
-        var res = data.Contents.map(e => e.Key)
-        res = res.filter( e => !(e.indexOf('/') > -1 ));
+        // filter out the trials for the experiment we're interested in
+        var res = data.Contents.map(e => e.Key);
+        res = res.filter( e => e.indexOf(experiment) > -1 );
         fulfill(res);
       }
     });
