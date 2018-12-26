@@ -1,6 +1,6 @@
 {
   "name": "psyexp",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Simplest possible backend for psychological (or any) experiment",
   "main": "psyexp.js",
   "scripts": {
