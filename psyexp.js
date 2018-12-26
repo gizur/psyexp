@@ -36,12 +36,15 @@ const start = function(config) {
     debug(req.method, req.url);
     if (experiment == 'status') {
       res.write('Alive and well!');
-    } if (req.method == 'POST' && checkExp(this.config, experiment)) {
+    }
+    else if (req.method == 'POST' && checkExp(this.config, experiment)) {
       res.write('POSTing to ' + experiment + ' and trial ' + trial);
-    } if (req.method == 'GET' && checkExp(this.config, experiment)) {
-      res.write('GETing ' + experiment + ' and trial ' + trial);
-    } else {
-      res.write('Unknown experiment ' + experiment + ' or method ' + req.method);
+    }
+    else if (req.method == 'GET' && checkExp(this.config, experiment)) {
+      res.write('GETing trials for ' + experiment);
+    }
+    else {
+      res.write('Unknown experiment: ' + experiment + ' or method: ' + req.method);
     }
     res.end();
   }).listen(process.env.PORT, function(){
@@ -67,9 +70,12 @@ node psyexp.js <command>
   add --name="experiment name" --email=name@example.com add new experiment
   list                                                  list the experiments
   start                                                 start the server
+  uuid                                                  get a univeral uniqeu id (for config file etc.)
   `);
 } else if (argv._[0] == 'config') {
   info('Config file:', process.env.CONFIG, 'in bucket:', process.env.BUCKET );
+} else if (argv._[0] == 'uuid') {
+  log('UUID:', helpers.uuid());
 } else if (argv._[0] == 'init') {
   log('Save empty', process.env.CONFIG, 'to the bucket', process.env.BUCKET );
   helpers.saveS3(process.env.BUCKET,
