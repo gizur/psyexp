@@ -3,14 +3,20 @@
 `psyexp` is a backend for psychological experiment. The frontend can be built
 in any language or tools that can use a HTTP API.
 
-## Setup
+## Setup using `npm`
 
-1. Setup a AWS S3 bucket and then create `setnev` by copying `setenv.templte` and updating it.
-2. Do `source setenv`
-3. Run `node psyexp.js help` for help.
+1. Create a folder where `psyexp` should be installed and run `npm install psyexp`
+2. Setup a AWS S3 bucket and then create `setenv` by copying `node_modules/psyexp/setenv.template` and updating it
+3. Do `source setenv`
+4. Run `node node_modules/psyexp/psyexp.js help` for help.
 
-Start the server with `node psyexp.js start`. Test that it is running with:
-`curl -d 'Test!!' -X POST http://localhost:3000/status`
+Start the server with `node node_modules/psyexp/psyexp.js start`.
+Test that it is running with: `curl http://localhost:3000/status`
+
+Copy `node_modules/psyexp/start.sh` if you want a script for starting the server.
+
+Run the unit tests to make sure things are ok: `./node_modules/psyexp/test.sh`
+The results needs to be inspected manually!
 
 
 ## Development using `psyexp`
